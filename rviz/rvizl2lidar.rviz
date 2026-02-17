@@ -1,0 +1,78 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Tool Properties
+    Name: Tool Properties
+  - Class: rviz_common/Views
+    Name: Views
+  - Class: rviz_common/Time
+    Name: Time
+
+Visualization Manager:
+  Class: ""
+  Displays:
+
+    - Name: Grid
+      Class: rviz_default_plugins/Grid
+      Enabled: true
+      Cell Size: 1
+      Plane: XY
+      Color: 160; 160; 160
+      Alpha: 0.3
+
+    - Name: PointCloud
+      Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Topic: /points
+      Queue Size: 5
+      Selectable: true
+      Style: Points
+      Size (Pixels): 3
+      Size (Meters): 0.04
+      Alpha: 1.0
+      Color Transformer: Rainbow
+      Channel Name: time
+      Min Color Value: 0.0
+      Max Color Value: 1.0
+      Use Fixed Frame: true
+
+    - Name: IMU
+      Class: rviz_default_plugins/Imu
+      Enabled: true
+      Topic: /imu/data
+      Queue Size: 5
+      Axes Length: 0.2
+      Axes Radius: 0.02
+
+  Global Options:
+    Fixed Frame: l2lidar_frame
+    Background Color: 48; 48; 48
+    Frame Rate: 30
+
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+    - Class: rviz_default_plugins/SetInitialPose
+    - Class: rviz_default_plugins/SetGoal
+
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 10
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.5
+      Yaw: 0.5
+
+Window Geometry:
+  Width: 1200
+  Height: 900
+  X: 100
+  Y: 100
