@@ -55,6 +55,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 
 #include <QCoreApplication>
 #include <QObject>
@@ -68,20 +70,34 @@ class L2LidarNode : public QObject, public rclcpp::Node
 
 public:
     explicit L2LidarNode(int argc, char **argv);
+    ~L2LidarNode();
 
 private slots:
     void onImuReceived();
     void onPointCloudReceived();
     void spinOnce();
+    void watchdogCheck();
 
 private:
+    void publishStaticTransform();
+    void shutdownNode(const std::string &reason);
+
     L2lidar lidar_;
 
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_pub_;
+    std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 
     std::string frame_id_;
     std::string imu_frame_id_;
+
+    // watchdog
+    QTimer watchdog_timer_;
+
+    QElapsedTimer last_imu_time_;
+    QElapsedTimer last_pc_time_;
+
+    int watchdog_timeout_ms_;
 
     QTimer spin_timer_;
 };

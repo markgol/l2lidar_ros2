@@ -51,20 +51,53 @@
 //		V0.1.0	2026-02-16	Initial package skeleton
 //
 #include <QCoreApplication>
-#include <rclcpp/rclcpp.hpp>
+#include <csignal>
+#include <atomic>
 
+#include <rclcpp/rclcpp.hpp>
 #include "l2lidar_node.hpp"
+
+static std::atomic_bool g_shutdown_requested{false};
+
+void signalHandler(int signal)
+{
+    if (!g_shutdown_requested.exchange(true))
+    {
+        RCLCPP_WARN(rclcpp::get_logger("l2lidar_node"),
+                    "Shutdown signal received (%d)", signal);
+
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            "quit",
+            Qt::QueuedConnection);
+    }
+}
 
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-
     QCoreApplication app(argc, argv);
 
-    auto node = std::make_shared<L2LidarNode>(argc, argv);
+    // this allows orderly shutodwn when ctrl+c is used
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
 
-    int ret = app.exec();
+    int ret = EXIT_SUCCESS;
 
-    rclcpp::shutdown();
+    try
+    {
+        auto node = std::make_shared<L2LidarNode>(argc, argv);
+        ret = app.exec();   // Qt event loop
+    }
+    catch (const std::exception &e)
+    {
+        RCLCPP_FATAL(rclcpp::get_logger("l2lidar_node"),
+                     "Fatal startup error: %s", e.what());
+        ret = EXIT_FAILURE;
+    }
+
+    if (rclcpp::ok())
+        rclcpp::shutdown();
+
     return ret;
 }

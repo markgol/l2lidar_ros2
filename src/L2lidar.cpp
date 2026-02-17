@@ -341,17 +341,29 @@ void L2lidar::processDatagram(const QByteArray& datagram)
 
         switch (header->packet_type) {
             case LIDAR_IMU_DATA_PACKET_TYPE:
-                decodeImu(PacketBuffer,Offset);
+                if(skipIMUpackets <= 0) {
+                    decodeImu(PacketBuffer,Offset);
+                } else {
+                    skipIMUpackets--;
+                }
                 Offset += header->packet_size;
                 break;
 
             case LIDAR_POINT_DATA_PACKET_TYPE:
-                decode3D(PacketBuffer,Offset);
+                if(skipPCpackets <= 0) {
+                    decode3D(PacketBuffer,Offset);
+                } else {
+                    skipPCpackets--;
+                }
                 Offset += header->packet_size;
                 break;
 
             case LIDAR_2D_POINT_DATA_PACKET_TYPE:
-                decode2D(PacketBuffer,Offset);
+                if(skipPCpackets <= 0) {
+                    decode2D(PacketBuffer,Offset);
+                } else {
+                    skipPCpackets--;
+                }
                 Offset += header->packet_size;
                 break;
 
@@ -833,8 +845,8 @@ void L2lidar::decodeAck(const QByteArray& datagram, uint64_t Offset)
 void L2lidar::handleRaw([[maybe_unused]]uint32_t packetType,
                              const QByteArray& datagram, uint64_t Offset)
 {
-    [[maybe_unused]] const auto* header =
-        reinterpret_cast<const FrameHeader*>(datagram.constData() + Offset);
+    //const auto* header =
+    //   reinterpret_cast<const FrameHeader*>(datagram.constData() + Offset);
 
     totalOther_++;
     totalPackets_++;
@@ -857,6 +869,8 @@ void L2lidar::ClearCounts()
     total3Dpackets_ = 0;
     total2Dpackets_ = 0;
     lostPackets_ = 0;
+    totalIMUretrieved_ = 0;
+    totalPCretrieved_ = 0;
 }
 
 //====================================================================
@@ -1522,6 +1536,9 @@ bool L2lidar::ConnectL2()
 
         mConnected = true;
 
+        skipIMUpackets = 100;
+        skipPCpackets = 100;
+
         // Connect readyRead signal
         connect(&L2socket, &QUdpSocket::readyRead, this, &L2lidar::readUDPpendingDatagrams);
 
@@ -1815,13 +1832,15 @@ bool L2lidar::ConvertL2data2pointcloud(Frame& frame, bool Frame3D, bool IMUadjus
         // check if latest IMU packet is within 10 msec
         double IMUtime;
         Imu = imu();
+        // do not count this as retrieval
+        totalIMUretrieved_--;
         if(Imu.header.header[0] == (uint8_t)0){
             // there is no latest packet
             return false;
         }
 
         IMUtime = (double)Imu.data.info.stamp.sec +(double)Imu.data.info.stamp.nsec * 1e-9;
-        if(abs(time-IMUtime) < 0.05) {
+        if(abs(time-IMUtime) < 0.08) {
             adjustWithIMU = true;
             Quat.w = Imu.data.quaternion[0];
             Quat.x = Imu.data.quaternion[1];

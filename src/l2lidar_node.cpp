@@ -54,6 +54,9 @@
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
+//---------------------------------------------------------------------
+// L2LidarNode constructor
+//---------------------------------------------------------------------
 L2LidarNode::L2LidarNode(int argc, char **argv)
     : Node("l2lidar_node")
 {
@@ -99,6 +102,17 @@ L2LidarNode::L2LidarNode(int argc, char **argv)
     get_parameter("l2_sync_rate_ms", sync_rate);
     get_parameter("enable_latency_measure", latency);
 
+    // --------- Watchdog timer settings---------------
+    declare_parameter<int>("watchdog_timeout_ms", 1000);
+    get_parameter("watchdog_timeout_ms", watchdog_timeout_ms_);
+    last_imu_time_.start();
+    last_pc_time_.start();
+
+    connect(&watchdog_timer_, &QTimer::timeout,
+            this, &L2LidarNode::watchdogCheck);
+
+    watchdog_timer_.start(500);  // check twice per second
+
     // ---------------- ROS publishers ----------------
     int pc_queue_size;
     int imu_queue_size;
@@ -106,8 +120,10 @@ L2LidarNode::L2LidarNode(int argc, char **argv)
     get_parameter("pointcloud_queue_size", pc_queue_size);
     get_parameter("imu_queue_size", imu_queue_size);
 
-    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("/imu/data", pc_queue_size);
-    pcl_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("/points", imu_queue_size);
+    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("/imu/data", imu_queue_size);
+    pcl_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("/points", pc_queue_size);
+    tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
+    publishStaticTransform();
 
     // initialize UDP addresses and ports for sending and receiving UDP packets
     lidar_.LidarSetCmdConfig(
@@ -133,9 +149,9 @@ L2LidarNode::L2LidarNode(int argc, char **argv)
 
     // connect to the L2
     if (!lidar_.ConnectL2()) {
-        RCLCPP_FATAL(get_logger(), "L2lidar connect failed: %s",
-                     lidar_.GetLastUDPError().toStdString().c_str());
-        rclcpp::shutdown();
+        throw std::runtime_error(
+            "L2lidar connected failed: " +
+            lidar_.GetLastUDPError().toStdString());
     }
 
     // ---------------- ROS spin timer ----------------
@@ -148,11 +164,67 @@ L2LidarNode::L2LidarNode(int argc, char **argv)
 }
 
 //---------------------------------------------------------------------
+// L2LidarNode destructor
+//---------------------------------------------------------------------
+
+L2LidarNode::~L2LidarNode()
+{
+    spin_timer_.stop();
+    watchdog_timer_.stop();
+}
+
+//---------------------------------------------------------------------
 // spinOnce
 //---------------------------------------------------------------------
 void L2LidarNode::spinOnce()
 {
+    if (!rclcpp::ok())
+    {
+        QCoreApplication::quit();
+        return;
+    }
+
     rclcpp::spin_some(shared_from_this());
+}
+
+//---------------------------------------------------------------------
+// shutdownNode
+//---------------------------------------------------------------------
+void L2LidarNode::shutdownNode(const std::string &reason)
+{
+    RCLCPP_FATAL(get_logger(), "%s", reason.c_str());
+
+    spin_timer_.stop();
+    watchdog_timer_.stop();
+
+    lidar_.DisconnectL2();   // if available in your class
+
+    rclcpp::shutdown();
+    QCoreApplication::quit();
+}
+
+//---------------------------------------------------------------------
+// shutdownNode
+//---------------------------------------------------------------------
+void L2LidarNode::watchdogCheck()
+{
+    if (!rclcpp::ok())
+        return;
+
+    qint64 imu_elapsed = last_imu_time_.elapsed();
+    qint64 pc_elapsed  = last_pc_time_.elapsed();
+
+    if (imu_elapsed > watchdog_timeout_ms_)
+    {
+        shutdownNode("Watchdog timeout: IMU data stalled");
+        return;
+    }
+
+    if (pc_elapsed > watchdog_timeout_ms_)
+    {
+        shutdownNode("Watchdog timeout: PointCloud data stalled");
+        return;
+    }
 }
 
 //---------------------------------------------------------------------
@@ -160,6 +232,7 @@ void L2LidarNode::spinOnce()
 //---------------------------------------------------------------------
 void L2LidarNode::onImuReceived()
 {
+    last_imu_time_.restart();
     auto imu_packet = lidar_.imu();
 
     sensor_msgs::msg::Imu msg;
@@ -190,6 +263,7 @@ void L2LidarNode::onImuReceived()
 //---------------------------------------------------------------------
 void L2LidarNode::onPointCloudReceived()
 {
+    last_pc_time_.restart();
     Frame frame;
     if (!lidar_.ConvertL2data2pointcloud(frame, true, true))
         return;
@@ -244,4 +318,31 @@ void L2LidarNode::onPointCloudReceived()
     }
 
     pcl_pub_->publish(cloud);
+}
+
+//---------------------------------------------------------------------
+// publishStaticTransform
+//---------------------------------------------------------------------
+void L2LidarNode::publishStaticTransform()
+{
+    geometry_msgs::msg::TransformStamped tf_msg;
+
+    tf_msg.header.stamp = this->get_clock()->now();
+    tf_msg.header.frame_id = frame_id_;      // "l2lidar_frame"
+    tf_msg.child_frame_id = imu_frame_id_;   // "l2lidar_imu"
+
+    // Identity transform (adjust if you know physical offset)
+    tf_msg.transform.translation.x = -0.007698;
+    tf_msg.transform.translation.y = -0.014655;
+    tf_msg.transform.translation.z = 0.00667;
+
+    tf_msg.transform.rotation.x = 0.0;
+    tf_msg.transform.rotation.y = 0.0;
+    tf_msg.transform.rotation.z = 0.0;
+    tf_msg.transform.rotation.w = 1.0;
+
+    tf_broadcaster_->sendTransform(tf_msg);
+
+    RCLCPP_INFO(get_logger(), "Published static TF: %s -> %s",
+                frame_id_.c_str(), imu_frame_id_.c_str());
 }

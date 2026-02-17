@@ -25,7 +25,11 @@ l2lidar_node:
     # ---------------- Point Cloud ----------------
     frame3d: true
     imu_adjust: true
+    
+    #----------------- Watch dog timer -----
+    watchdog_timeout_ms: 10000
 
     # ---------------- ROS QoS ----------------
-    pointcloud_queue_size: 10
-    imu_queue_size: 10
+    pointcloud_queue_size: 20
+    imu_queue_size: 20
+    

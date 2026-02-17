@@ -32,19 +32,13 @@ Visualization Manager:
       Size (Pixels): 3
       Size (Meters): 0.04
       Alpha: 1.0
+      Decay Time: 5.0
+      Use Fixed Frame: true
       Color Transformer: Rainbow
       Channel Name: time
       Min Color Value: 0.0
       Max Color Value: 1.0
       Use Fixed Frame: true
-
-    - Name: IMU
-      Class: rviz_default_plugins/Imu
-      Enabled: true
-      Topic: /imu/data
-      Queue Size: 5
-      Axes Length: 0.2
-      Axes Radius: 0.02
 
   Global Options:
     Fixed Frame: l2lidar_frame

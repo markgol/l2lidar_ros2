@@ -73,6 +73,12 @@
 //                          mL2EnableSyncHost && enableL2TimeStampFix
 //                              true  use L2 timestamping for each cloud point
 //                              false use system time for each cloud point
+//                      Dump first 200 frames of IMU and point cloud after connect
+//                          It takes a some time for the first sync to host to occur
+//                          So it will return wrong time in the initial IMU and point
+//                          cloud packets
+//                      Added more packet stats to help track if app is keeping up
+//                      with packet rate
 //
 //--------------------------------------------------------
 
@@ -169,12 +175,13 @@ public:
         return latestWorkmode_;
     }
 
-    const LidarImuDataPacket imu() const {
+    const LidarImuDataPacket imu() {
         QMutexLocker locker(&PacketMutex);
+        totalIMUretrieved_++;
         return latestImuPacket_;
     }
 
-    const LidarIpAddressConfig IPaddress() const {
+    const LidarIpAddressConfig IPaddress() {
         QMutexLocker locker(&PacketMutex);
         return latestIPaddress_;
     }
@@ -190,13 +197,15 @@ public:
         return latestMACdata_;
     }
 
-    const Lidar2DPointDataPacket Pcl2Dpacket() const {
+    const Lidar2DPointDataPacket Pcl2Dpacket() {
         QMutexLocker locker(&PacketMutex);
+        totalPCretrieved_++;
         return latest2DdataPacket_;
     }
 
-    const LidarPointDataPacket Pcl3Dpacket() const {
+    const LidarPointDataPacket Pcl3Dpacket() {
         QMutexLocker locker(&PacketMutex);
+        totalPCretrieved_++;
         return latest3DdataPacket_;
     }
 
@@ -223,6 +232,8 @@ public:
     uint64_t totalIMU() const { return totalIMUpackets_;}
     uint64_t totalPackets() const { return totalPackets_; }
     uint64_t totalOther() const { return lostPackets_; }
+    uint64_t totalIMUretrieved() const { return totalIMUretrieved_; }
+    uint64_t totalPCretrieved() const { return totalPCretrieved_; }
 
     // L2 commands
     bool GetL2Params(void);
@@ -369,6 +380,8 @@ private: // variables
     uint64_t total3Dpackets_{0};
     uint64_t total2Dpackets_{0};
     uint64_t totalOther_{0};
+    uint64_t totalIMUretrieved_{0};
+    uint64_t totalPCretrieved_{0};
 
     // QudpSocket parmameters
     // These should only be a reflection of L2
@@ -404,6 +417,9 @@ private: // variables
     double mL2ScaleTimeStamp {2.0};
     bool mL2EnableSyncHost = false;
     uint32_t mL2TSsyncRate = {0}; // stop timer
+
+    int skipIMUpackets {100}; // countdown to good frames
+    int skipPCpackets {100};// countdown to good frames
 
     // workmode
     uint32_t latestWorkmode_ {256}; // 256 is invalid

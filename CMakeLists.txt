@@ -21,6 +21,9 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 # ============================
 # Qt 6.10 (force your install)
@@ -78,6 +81,9 @@ ament_target_dependencies(l2lidar_node
   rclcpp
   sensor_msgs
   std_msgs
+  tf2
+  tf2_ros
+  geometry_msgs
 )
 
 target_include_directories(l2lidar_node PUBLIC
