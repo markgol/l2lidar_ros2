@@ -79,6 +79,9 @@
 //                          cloud packets
 //                      Added more packet stats to help track if app is keeping up
 //                      with packet rate
+//                      Added range(m) to point cloud data.  It is already present
+//                      in the raw point cloud packet.  It saves recomputing it later
+//                      in a user app.  PCpoint.h has been changed to include this field.
 //
 //--------------------------------------------------------
 

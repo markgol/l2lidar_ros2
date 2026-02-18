@@ -103,6 +103,9 @@
 //                      then is the point cloud packet is differnt from
 //                      IMU packet time by more than 50 msec the point cloud
 //                      packet will be dropped.
+//                      Added range(m) to point cloud data.  It is already present
+//                      in the raw point cloud packet.  It saves recomputing it later
+//                      in a user app.  PCpoint.h has been changed to include this field.
 //
 //--------------------------------------------------------
 
@@ -1869,6 +1872,7 @@ bool L2lidar::ConvertL2data2pointcloud(Frame& frame, bool Frame3D, bool IMUadjus
             p.y,
             p.z,
             p.intensity,
+            p.range,
             p.time+adjustedTime,
             p.ring
         });

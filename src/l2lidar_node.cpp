@@ -286,11 +286,12 @@ void L2LidarNode::onPointCloudReceived()
 
     sensor_msgs::PointCloud2Modifier modifier(cloud);
     modifier.setPointCloud2Fields(
-        5,
+        6,
         "x", 1, sensor_msgs::msg::PointField::FLOAT32,
         "y", 1, sensor_msgs::msg::PointField::FLOAT32,
         "z", 1, sensor_msgs::msg::PointField::FLOAT32,
         "intensity", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "range", 1, sensor_msgs::msg::PointField::FLOAT32,
         "time", 1, sensor_msgs::msg::PointField::FLOAT32
         );
 
@@ -300,6 +301,7 @@ void L2LidarNode::onPointCloudReceived()
     sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
     sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
     sensor_msgs::PointCloud2Iterator<float> iter_i(cloud, "intensity");
+    sensor_msgs::PointCloud2Iterator<float> iter_r(cloud, "range");
     sensor_msgs::PointCloud2Iterator<float> iter_t(cloud, "time");
 
     for (const PCpoint &p : std::as_const(frame))
@@ -308,12 +310,14 @@ void L2LidarNode::onPointCloudReceived()
         *iter_y = p.y;
         *iter_z = p.z;
         *iter_i = p.intensity;
+        *iter_r = p.range;
         *iter_t = p.time;   // per-point timestamp in seconds
 
         ++iter_x;
         ++iter_y;
         ++iter_z;
         ++iter_i;
+        ++iter_r;
         ++iter_t;
     }
 

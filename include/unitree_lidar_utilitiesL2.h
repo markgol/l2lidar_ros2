@@ -39,6 +39,7 @@
 //              Correction to point array size in parseFromPacketPointCloud2D()
 //              should have been MAX_2DPOINT_PER_FRAME not MAX_3DPOINTS_PER_FRAME
 //  2026-01-24  Removed unused #includes
+//  2026-02-17  Included range with the other point cloud data
 //
 //-----------------------------------------------------------------------
 
@@ -82,6 +83,7 @@ typedef struct
     float y;
     float z;
     float intensity;
+    float range;
     float time;    // relative time of this point from cloud stamp
     uint32_t ring; // ring is always 1
 } PointUnitree;
@@ -245,6 +247,7 @@ inline void parseFromPacketToPointCloud(
         // push back this point to cloud
         point3d.intensity = intensities[j];
         point3d.time = time_relative;
+        point3d.range = (float)ranges[j]/(float)100.0; // convert to meters
         cloud.points.push_back(point3d);
     }
 }
@@ -327,6 +330,7 @@ inline void parseFromPacketPointCloud2D(
 
         // push back this point to cloud
         point3d.intensity = intensities[j];
+        point3d.range = (float)ranges[j]/(float)100.0; // convert to meters
         point3d.time = time_relative;
         cloud.points.push_back(point3d);
     }

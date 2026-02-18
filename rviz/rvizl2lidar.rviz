@@ -26,18 +26,18 @@ Visualization Manager:
       Class: rviz_default_plugins/PointCloud2
       Enabled: true
       Topic: /points
-      Queue Size: 5
+      Queue Size: 10
       Selectable: true
       Style: Points
-      Size (Pixels): 3
+      Size (Pixels): 2
       Size (Meters): 0.04
       Alpha: 1.0
-      Decay Time: 5.0
-      Use Fixed Frame: true
+      Decay Time: 10.0
       Color Transformer: Rainbow
-      Channel Name: time
+      Channel Name: range
+      Autoscale: false
       Min Color Value: 0.0
-      Max Color Value: 1.0
+      Max Color Value: 5.0
       Use Fixed Frame: true
 
   Global Options:
