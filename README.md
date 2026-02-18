@@ -284,7 +284,7 @@ Design Goals
 Version
 -------
 
-**0.1.0** – Initial functional driver with synchronized IMU and point cloud publishing.
+**0.1.0** – Initial functional driver with synchronized IMU and point cloud publishing.  This is only the intial release and does not include a prebuilt executable.  That is planned for the 0.2.0 release
 
 * * *
 
