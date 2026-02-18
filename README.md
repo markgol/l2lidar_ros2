@@ -291,9 +291,11 @@ Version
 Licenses
 -------
 
-GNU GENERAL PUBLIC LICENSE
+l2lidar_ros2 license, see license file: l2lidar_ros2 LICENSE.txt
 
-Version 3, 29 June 2007
+Qt license, see license file: Qt LICENSE LGPL.txt
+
+Unitree license, see license file: Unitree BSD-3 LICENSE.txt
 
 * * *
 
