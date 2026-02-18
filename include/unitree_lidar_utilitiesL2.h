@@ -247,7 +247,7 @@ inline void parseFromPacketToPointCloud(
         // push back this point to cloud
         point3d.intensity = intensities[j];
         point3d.time = time_relative;
-        point3d.range = (float)ranges[j]/(float)100.0; // convert to meters
+        point3d.range = (float)ranges[j]/(float)1000.0; // convert  mm to meters
         cloud.points.push_back(point3d);
     }
 }
@@ -330,7 +330,7 @@ inline void parseFromPacketPointCloud2D(
 
         // push back this point to cloud
         point3d.intensity = intensities[j];
-        point3d.range = (float)ranges[j]/(float)100.0; // convert to meters
+        point3d.range = (float)ranges[j]/(float)1000.0; // convert mm to meters
         point3d.time = time_relative;
         cloud.points.push_back(point3d);
     }
