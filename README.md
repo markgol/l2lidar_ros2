@@ -46,19 +46,24 @@ Architecture
 ------------
 
 Unitree L2 LiDAR (UDP Ethernet)
-            | 
-            v
 
-    L2lidar (Qt 6.10 backend)
-            |
-            v
+        |
 
-    l2lidar_ros2 node
-            |        
+L2lidar (Qt 6.10 backend)
 
-            +--> /points      (PointCloud2)
-            +--> /imu/data    (Imu)
-            +--> /tf_static`
+        |
+
+l2lidar_ros2 node
+
+        |
+
+        +--> /points      (PointCloud2)
+
+        +--> /imu/data    (Imu)
+
+        +--> /tf_static
+
+
 
 The node uses Qt’s networking and event system for UDP packet reception and ROS 2 publishers for message dissemination. No Qt GUI or ROS GUI dependencies are used.
 
