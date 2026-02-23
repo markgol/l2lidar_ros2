@@ -5,12 +5,14 @@
 //  Module: l2lidar_node.cpp
 //
 //	Purpose:
-//		This ROS2 package provides an interface between ROS2 and the
-//		Untiree L2 4D LiDAR module.  The L2 provides point cloud data
-//		 and IMU data as it scans.  The scans are 3D intensity.  It generates
-//		point cloud data 300 points at a time (a frame).  The L2 uses an
-//		UPD Ethernet interface to send data.  This uses the L2lidar class 
-//		software package to provide the backend interface to the L2.
+//		The l2lidar_ros2 app is a ROS2 package which provides an interface
+//      between ROS2 and the Untiree L2 4D LiDAR module.
+//      The L2 provides point cloud data and IMU data as it scans.
+//      The scans are 3D (x,y,z) with intensity, rannge and ring (always 1).
+//      It generates point cloud data 300 points at a time (an L2 frame).
+//      The L2 uses a UPD Ethernet interface to send data.
+//      This app uses the L2lidar class	software package to provide
+//      the backend interface to the L2.
 //		This is class is structured to be compatible with the formats
 //		and interfaces needed for support in the ROS2 packages.
 //
@@ -30,12 +32,14 @@
 //          src/l2lidar_node.cpp
 //          include/l2lidar_node.hpp
 //
-//      L2 driver sources (these can be marked read only)
-//          src/L2lidar.cpp
-//          include/L2lidar.h
-//          include/PCpoint.h
-//          unitree_lidar_protocol.h
-//          untiree_lidar_utilities.h
+//      L2 driver sources are in their own folder
+//          L2lidarClass
+//              src/L2lidar.cpp
+//              include/L2lidar.h
+//              include/PCpoint.h
+//              include/quaternion.h
+//              include/unitree_lidar_protocolL2.h
+//              include/untiree_lidar_utilitiesL2.h
 //
 //      Restrictions
 //      The sources require Qt6.10.2 or higher.
@@ -49,6 +53,11 @@
 //		completed.
 //
 //		V0.1.0	2026-02-16	Initial package skeleton
+//		V0.1.1	2026-02-18	Corrected quaternion order
+//      V0.2.0  2026-02-21  Added aggregation of L2 frames for publishing
+//                          This is needed to align point cloud publishing
+//                          aligned otthe requirements for LIO-SAM methodology
+//                          Changed point time from float to double
 //
 #include "l2lidar_node.hpp"
 
@@ -76,6 +85,7 @@ L2LidarNode::L2LidarNode(int argc, char **argv)
 
     declare_parameter<int>("pointcloud_queue_size", 10);
     declare_parameter<int>("imu_queue_size", 10);
+    declare_parameter<int>("aggregateNframes", 38);
 
     // get parameters from config file
 
@@ -94,7 +104,7 @@ L2LidarNode::L2LidarNode(int argc, char **argv)
     get_parameter("host_port", host_port);
 
     // get time correction and timebase syncing parameters
-    bool time_corr, host_sync, latency;
+    bool latency;
     int sync_rate;
 
     get_parameter("enable_l2_time_correction", time_corr);
@@ -119,6 +129,7 @@ L2LidarNode::L2LidarNode(int argc, char **argv)
 
     get_parameter("pointcloud_queue_size", pc_queue_size);
     get_parameter("imu_queue_size", imu_queue_size);
+    get_parameter("aggregateNframes", aggregateNframes);
 
     imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("/imu/data", imu_queue_size);
     pcl_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("/points", pc_queue_size);
@@ -241,11 +252,11 @@ void L2LidarNode::onImuReceived()
     msg.header.stamp.nanosec = imu_packet.data.info.stamp.nsec;
     msg.header.frame_id = imu_frame_id_;
 
-    // review order of quaternion array
-    msg.orientation.x = imu_packet.data.quaternion[0];
-    msg.orientation.y = imu_packet.data.quaternion[1];
-    msg.orientation.z = imu_packet.data.quaternion[2];
-    msg.orientation.w = imu_packet.data.quaternion[3];
+    // Correct order of quaternion array
+    msg.orientation.w = imu_packet.data.quaternion[0];
+    msg.orientation.x = imu_packet.data.quaternion[1];
+    msg.orientation.y = imu_packet.data.quaternion[2];
+    msg.orientation.z = imu_packet.data.quaternion[3];
 
     msg.angular_velocity.x = imu_packet.data.angular_velocity[0];
     msg.angular_velocity.y = imu_packet.data.angular_velocity[1];
@@ -263,7 +274,13 @@ void L2LidarNode::onImuReceived()
 //---------------------------------------------------------------------
 void L2LidarNode::onPointCloudReceived()
 {
-    last_pc_time_.restart();
+    static long long starttime;
+    static Frame aggframe;
+    static int CurrentAggFrame {0};
+    bool UseAggFrame {false};
+
+    last_pc_time_.restart(); // restart watchdog
+
     Frame frame;
     if (!lidar_.ConvertL2data2pointcloud(frame, true, true))
         return;
@@ -271,17 +288,62 @@ void L2LidarNode::onPointCloudReceived()
     if (frame.empty())
         return;
 
+    // aggregate frames if required
+    if(aggregateNframes!=0 && time_corr && host_sync) {
+        // restart aggregation once current aggregation is completed
+        if(CurrentAggFrame >= aggregateNframes) {
+            CurrentAggFrame=0;
+            aggframe.clear();
+        }
+        // add frame to aggframe
+        int64_t oldAggsize = aggframe.size();
+        //int64_t newFramesize = frame.size();
+        //int64_t InsertPos;
+
+        if(CurrentAggFrame == 0) {
+            //InsertPos = 0;
+            // this sets up for the time entry to be true time
+            // and all other entries to be relative time to first entry
+            // if you were using this in ROS2 LIO SAM then the frame stamp
+            // for publising would be set to the frame[0].time
+            // and the starttime = frame[0].time instead of 2x
+            starttime = frame[0].time;
+        } else {
+            //InsertPos = oldAggsize;
+            //starttime = aggframe[0].time;
+        }
+
+        //aggframe.resize(oldAggsize+newFramesize); // increase aggframe for new points
+        aggframe += frame;
+
+        CurrentAggFrame++;
+        if(CurrentAggFrame < aggregateNframes) {
+            // keep building up aggregated frame
+            return;
+        }
+        // if we get here frame is accumulated so go ahead and publish
+        UseAggFrame = true;
+    } else {
+        starttime = frame[0].time;
+    }
+
+
     sensor_msgs::msg::PointCloud2 cloud;
     cloud.header.frame_id = frame_id_;
 
     // Use first point timestamp as frame timestamp
-    double t0 = frame.front().time;
-    int64_t sec_part = static_cast<int64_t>(t0);
-    int64_t nsec_part = static_cast<int64_t>((t0 - sec_part) * 1e9);
+    long long t0 = starttime;
+    long long sec_part = (t0/1000000000);
+    long long nsec_part = sec_part*1000000000;
+    nsec_part = t0 - nsec_part;
     cloud.header.stamp = rclcpp::Time(sec_part, nsec_part);
 
     cloud.height = 1;
-    cloud.width = frame.size();
+    if(UseAggFrame) {
+        cloud.width = aggframe.size();
+    } else {
+        cloud.width = frame.size();
+    }
     cloud.is_dense = true;
 
     sensor_msgs::PointCloud2Modifier modifier(cloud);
@@ -292,10 +354,8 @@ void L2LidarNode::onPointCloudReceived()
         "z", 1, sensor_msgs::msg::PointField::FLOAT32,
         "intensity", 1, sensor_msgs::msg::PointField::FLOAT32,
         "range", 1, sensor_msgs::msg::PointField::FLOAT32,
-        "time", 1, sensor_msgs::msg::PointField::FLOAT32
+        "time", 1, sensor_msgs::msg::PointField::FLOAT64
         );
-
-    modifier.resize(frame.size());
 
     sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
     sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
@@ -304,21 +364,50 @@ void L2LidarNode::onPointCloudReceived()
     sensor_msgs::PointCloud2Iterator<float> iter_r(cloud, "range");
     sensor_msgs::PointCloud2Iterator<float> iter_t(cloud, "time");
 
-    for (const PCpoint &p : std::as_const(frame))
-    {
-        *iter_x = p.x;
-        *iter_y = p.y;
-        *iter_z = p.z;
-        *iter_i = p.intensity;
-        *iter_r = p.range;
-        *iter_t = p.time;   // per-point timestamp in seconds
+    if(UseAggFrame) {
+        modifier.resize(aggframe.size());
+        for (const PCpoint &p : std::as_const(aggframe))
+        {
+            long long relativetime;
+            double newtime;
+            *iter_x = p.x;
+            *iter_y = p.y;
+            *iter_z = p.z;
+            *iter_i = p.intensity;
+            *iter_r = p.range;
+            relativetime = p.time-starttime;
+            newtime = relativetime*1.0e-9;
+            *iter_t = newtime;   // per-point timestamp in seconds
 
-        ++iter_x;
-        ++iter_y;
-        ++iter_z;
-        ++iter_i;
-        ++iter_r;
-        ++iter_t;
+            ++iter_x;
+            ++iter_y;
+            ++iter_z;
+            ++iter_i;
+            ++iter_r;
+            ++iter_t;
+        }
+    } else {
+        modifier.resize(frame.size());
+        for (const PCpoint &p : std::as_const(frame))
+        {
+            long long relativetime;
+            double newtime;
+            *iter_x = p.x;
+            *iter_y = p.y;
+            *iter_z = p.z;
+            *iter_i = p.intensity;
+            *iter_r = p.range;
+            relativetime = p.time-starttime;
+            newtime = relativetime*1.0e-9;
+            *iter_t = newtime;   // per-point timestamp in seconds
+
+            ++iter_x;
+            ++iter_y;
+            ++iter_z;
+            ++iter_i;
+            ++iter_r;
+            ++iter_t;
+        }
     }
 
     pcl_pub_->publish(cloud);

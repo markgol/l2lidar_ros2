@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(l2lidar_ros2
-	VERSION 0.1.1
-	LANGUAGES CXX
-)
+        VERSION 0.1.1
+        LANGUAGES CXX
+  )
 
 # ============================
 # Compiler settings
@@ -47,6 +47,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Network)
 # ============================
 include_directories(
   include
+  L2lidarClass/include
 )
 
 # ============================
@@ -54,15 +55,15 @@ include_directories(
 # ============================
 set(SOURCES
   src/l2lidar_node.cpp
-  src/L2lidar.cpp
+  L2lidarClass/src/L2lidar.cpp
 )
 
 set(HEADERS
-  include/L2lidar.h
-  include/PCpoint.h
-  include/unitree_lidar_protocolL2.h
-  include/unitree_lidar_utilitiesL2.h
-  include/quaternion.h
+  L2lidarClass/include/L2lidar.h
+  L2lidarClass/include/PCpoint.h
+  L2lidarClass/include/unitree_lidar_protocolL2.h
+  L2lidarClass/include/unitree_lidar_utilitiesL2.h
+  L2lidarClass/include/quaternion.h
 )
 
 # ============================
