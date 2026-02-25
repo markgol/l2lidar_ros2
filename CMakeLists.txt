@@ -31,7 +31,13 @@ find_package(geometry_msgs REQUIRED)
 # ============================
 # Qt 6.10 (force your install)
 # ============================
-set(QT610_PATH "/opt/Qt/6.10.2/gcc_arm64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+	set(QT610_PATH "/opt/Qt/6.10.2/gcc_64")	
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+	set(QT610_PATH "/opt/Qt/6.10.2/gcc_arm64")
+else()
+    set( QT610_PATH "Unknown architecture")
+endif()
 
 list(PREPEND CMAKE_PREFIX_PATH
   ${QT610_PATH}
