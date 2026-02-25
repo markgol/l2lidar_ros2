@@ -296,21 +296,9 @@ void L2LidarNode::onPointCloudReceived()
             aggframe.clear();
         }
         // add frame to aggframe
-        int64_t oldAggsize = aggframe.size();
-        //int64_t newFramesize = frame.size();
-        //int64_t InsertPos;
 
         if(CurrentAggFrame == 0) {
-            //InsertPos = 0;
-            // this sets up for the time entry to be true time
-            // and all other entries to be relative time to first entry
-            // if you were using this in ROS2 LIO SAM then the frame stamp
-            // for publising would be set to the frame[0].time
-            // and the starttime = frame[0].time instead of 2x
             starttime = frame[0].time;
-        } else {
-            //InsertPos = oldAggsize;
-            //starttime = aggframe[0].time;
         }
 
         //aggframe.resize(oldAggsize+newFramesize); // increase aggframe for new points
