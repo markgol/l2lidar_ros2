@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(l2lidar_ros2
-        VERSION 0.2.0
+        VERSION 0.2.1
         LANGUAGES CXX
   )
 

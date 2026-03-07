@@ -1,8 +1,7 @@
 l2lidar_ros2
 ============
 
-**updated 2026-02-23**
-
+**updated 2026-03-06**
 Overview
 ============
 
@@ -300,6 +299,10 @@ Version
             The L2lidar class sources moved to their own directories.
 
             The L2lidar class was updated to improve computational accuracy and time stamp handling
+
+0.2.1 - Included parameters in the config.yaml frame3d and imu_adjust in the implementation
+
+            This allows the user to specify that 3D frames or 2D frames are to be published.  It also allows the user to specify the pose (rotation) correction is to be applied before the point cloud data is published.
 
 * * *
 

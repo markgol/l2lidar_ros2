@@ -54,10 +54,11 @@
 //
 //		V0.1.0	2026-02-16	Initial package skeleton
 //		V0.1.1	2026-02-18	Corrected quaternion order
-//      V0.2.0  2026-02-21  Added aggregation of L2 frames for publishing
-//                          This is needed to align point cloud publishing
-//                          aligned otthe requirements for LIO-SAM methodology
-//                          Changed point time from float to double
+//      V0.2.0 	2026-02-21 	Added aggregation of L2 frames for publishing
+//                          					This is needed to align point cloud publishing
+//                         					aligned otthe requirements for LIO-SAM methodology
+//                          					Changed point time from float to double
+//		V0.2.1	2026-03-06	Paramterized  frame3d and imu_adjust settings
 //
 #include "l2lidar_node.hpp"
 
@@ -82,6 +83,11 @@ L2LidarNode::L2LidarNode(int argc, char **argv)
 
     declare_parameter<std::string>("frame_id", "l2lidar_frame");
     declare_parameter<std::string>("imu_frame_id", "l2lidar_imu");
+
+    declare_parameter<bool>("frame3d", true);
+    declare_parameter<bool>("imu_adjust", true);
+	
+	declare_parameter<int>("watchdog_timeout_ms", 1000);
 
     declare_parameter<int>("pointcloud_queue_size", 10);
     declare_parameter<int>("imu_queue_size", 10);
@@ -112,8 +118,12 @@ L2LidarNode::L2LidarNode(int argc, char **argv)
     get_parameter("l2_sync_rate_ms", sync_rate);
     get_parameter("enable_latency_measure", latency);
 
+	// get point cloud parameters
+	
+    get_parameter("frame3d", frame3d);
+    get_parameter("imu_adjust", imu_adjust);
+
     // --------- Watchdog timer settings---------------
-    declare_parameter<int>("watchdog_timeout_ms", 1000);
     get_parameter("watchdog_timeout_ms", watchdog_timeout_ms_);
     last_imu_time_.start();
     last_pc_time_.start();
@@ -282,7 +292,7 @@ void L2LidarNode::onPointCloudReceived()
     last_pc_time_.restart(); // restart watchdog
 
     Frame frame;
-    if (!lidar_.ConvertL2data2pointcloud(frame, true, true))
+    if (!lidar_.ConvertL2data2pointcloud(frame, frame3d, imu_adjust))
         return;
 
     if (frame.empty())

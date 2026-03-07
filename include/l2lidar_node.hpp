@@ -53,9 +53,10 @@
 //		completed.
 //
 //		V0.1.0	2026-02-16	Initial package skeleton
-//      V0.2.0  2026-02-21  Added aggregation of L2 frames for publishing
-//                          This is needed to align point cloud publishing
-//                          aligned otthe requirements for LIO-SAM methodology
+//      V0.2.0 	2026-02-21	Added aggregation of L2 frames for publishing
+//										This is needed to align point cloud publishing
+//                          					aligned otthe requirements for LIO-SAM methodology
+//		V0.2.1	2026-03-06	Parameterized frame3d and imu_adjust
 //
 #pragma once
 
@@ -102,6 +103,8 @@ private:
     bool time_corr{true}, host_sync{true};
     int aggregateNframes{38};
 
+	bool frame3d, imu_adjust;
+	
     // watchdog
     QTimer watchdog_timer_;
 
