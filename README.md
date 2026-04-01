@@ -1,4 +1,7 @@
-l2lidar_ros2
+This has been replaced by L2lidar_node: https://github.com/markgol/l2lidar_node
+============
+
+l2lidar_ros2 (DEPRACATED)
 ============
 
 **updated 2026-03-06**
